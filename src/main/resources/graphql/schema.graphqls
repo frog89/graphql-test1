@@ -1,0 +1,39 @@
+type Employee {
+  id: ID!
+  firstName: String
+  lastName: String
+  job: Job
+}
+
+#type EmployeeWithoutJob {
+#  id: ID!
+#  firstName: String
+#  lastName: String
+#}
+
+#type JobWithoutEmployee {
+#  id: ID!
+#  jobTitle: String!
+#  minSalary: Int
+#  maxSalary: Int
+#}
+
+type Job {
+  id: ID!
+  jobTitle: String!
+  minSalary: Int
+  maxSalary: Int
+  employees: [Employee]
+}
+
+union All = Employee | Job
+
+type Query {
+  allEmps: [Employee]
+  allJobs: [Job]
+  allAll: [All]
+}
+
+schema {
+  query: Query
+}

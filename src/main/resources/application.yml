@@ -1,0 +1,11 @@
+server:
+    port: 8080
+
+spring:
+  profiles:
+    active: xyz
+    
+ora12pdb:
+    url: jdbc:oracle:thin:@localhost:1521:ORA12PDB
+    username: hr2
+    password: hr2
