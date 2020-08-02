@@ -5,19 +5,6 @@ type Employee {
   job: Job
 }
 
-#type EmployeeWithoutJob {
-#  id: ID!
-#  firstName: String
-#  lastName: String
-#}
-
-#type JobWithoutEmployee {
-#  id: ID!
-#  jobTitle: String!
-#  minSalary: Int
-#  maxSalary: Int
-#}
-
 type Job {
   id: ID!
   jobTitle: String!

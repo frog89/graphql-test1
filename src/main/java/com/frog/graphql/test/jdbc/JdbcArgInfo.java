@@ -42,7 +42,18 @@ public class JdbcArgInfo {
 		
 		stringArgs.add(argValue);
 	}
-	
+
+	public void addStringBetweenArg(String argName, String argValue1, String argValue2) {		
+		JdbcArg jdbcArg = new JdbcArg();
+		jdbcArg.setArgName(argName);
+		jdbcArg.setValueCount(2);
+		jdbcArg.setValueStartIndex(stringArgs.size() + 1);
+		jdbcArg.setValueType(VALUE_TYPE.StringBetween);
+		args.add(jdbcArg);
+		stringArgs.add(argValue1);
+		stringArgs.add(argValue2);
+	}
+
 	public void addDoubleArg(String argName, Double argValue) {
 		JdbcArg jdbcArg = new JdbcArg();
 		jdbcArg.setArgName(argName);
@@ -56,6 +67,21 @@ public class JdbcArgInfo {
 	
 	public void addLongArg(String argName, Long argValue) {
 		addDoubleArg(argName, argValue.doubleValue());
+	}
+	
+	public void addDoubleBetweenArg(String argName, Double argValue1, Double argValue2) {		
+		JdbcArg jdbcArg = new JdbcArg();
+		jdbcArg.setArgName(argName);
+		jdbcArg.setValueCount(2);
+		jdbcArg.setValueStartIndex(stringArgs.size() + 1);
+		jdbcArg.setValueType(VALUE_TYPE.NumberBetween);
+		args.add(jdbcArg);
+		numberArgs.add(argValue1);
+		numberArgs.add(argValue2);
+	}
+
+	public void addLongBetweenArg(String argName, Long argValue1, Long argValue2) {
+		addDoubleBetweenArg(argName, argValue1.doubleValue(), argValue2.doubleValue());
 	}
 
 	public void addStringTableArg(String argName, List<String> argValueList) {		

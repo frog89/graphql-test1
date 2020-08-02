@@ -10,22 +10,37 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.frog.graphql.test.emp.querybuilder.EmpQueryBuilder;
+import com.frog.graphql.test.emp.repository.EmpFieldEnum;
+import com.frog.graphql.test.emp.repository.EmpRepository;
+import com.frog.graphql.test.emp.repository.EmpTableEnum;
 import com.frog.graphql.test.jdbc.JdbcArgInfo;
 import com.frog.graphql.test.jdbc.JdbcService;
 import com.frog.graphql.test.pojo.Employee;
 import com.frog.graphql.test.pojo.Job;
+import com.frog.graphql.test.querybuilder.DbField;
+import com.frog.graphql.test.querybuilder.SqlQuery;
+import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
+import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
+import com.frog.graphql.test.querybuilder.constraint.StringConstraint;
+import com.frog.graphql.test.querybuilder.constraint.StringOperatorEnum;
 
 import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.SelectedField;
 
 @Service
-public class EmployeeService {
-	private final String ENTITY_SQL = "select employee_id, first_name, last_name, job_id from hr.employees"; 
-	
+public class EmployeeService {	
 	@Autowired
 	private JdbcService jdbcService;
 		   
 	@Autowired
 	private JobService jobService;
+	
+	@Autowired
+	private EmpQueryBuilder queryBuilder;
+
+	@Autowired
+	private EmpRepository empRepository;
 	
 	public List<Employee> find(String sql, JdbcArgInfo argInfo) {
 		final ArrayList<Employee> list = new ArrayList<Employee>();
@@ -57,22 +72,55 @@ public class EmployeeService {
 		}
 		return list;
 	}
+	
+	public List<Employee> find(SqlQuery query) {
+		List<DbField> selectFields = query.getSelectFieldList();
+		final ArrayList<Employee> list = new ArrayList<Employee>();
+		try {
+			Consumer<ResultSet> consumer = new Consumer<ResultSet>() {
+				@Override
+				public void accept(ResultSet rs) {
+					Employee emp = new Employee();
+					try {
+						for (int i=1; i <= selectFields.size(); i++) {
+							DbField field = selectFields.get(i-1);
+							EmpFieldEnum fieldEnum = EmpFieldEnum.fromOrdinalString(field.getId());
+							if (fieldEnum == EmpFieldEnum.EMPLOYEES_EMPLOYEE_ID) {
+								emp.setId(rs.getLong(i));
+							} else if (fieldEnum == EmpFieldEnum.EMPLOYEES_FIRST_NAME) {
+								emp.setFirstName(rs.getString(i));
+							} else if (fieldEnum == EmpFieldEnum.EMPLOYEES_LAST_NAME) {
+								emp.setLastName(rs.getString(i));
+							} else if (fieldEnum == EmpFieldEnum.EMPLOYEES_JOB_ID) {
+								emp.setJobId(rs.getString(i));						
+							}
+						}
+						list.add(emp);
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			};
+			
+			jdbcService.consumeData(query.getSql(), query.getArgInfo(), consumer);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return list;
+	}
+
 
 	public List<Employee> findAll(DataFetchingEnvironment dataFetchingEnvironment) {
-//		List<Double> idList = new ArrayList<Double>();
-//		for (int i=0; i<1000000; i++) {
-//			idList.add(new Long(i).doubleValue());
-//		}
-//		JdbcArgInfo argInfo = new JdbcArgInfo();
-//		argInfo.addDoubleTableArg("empIds", idList);
-//		argInfo.addStringArg("lastNamePart", "as");
-//
-//		String sql = ENTITY_SQL + " where last_name like '%' || :p2 || '%' and employee_id in (select column_value from table(:p1))";
-//		List<Employee> employeeList =  find(sql, argInfo);
-
-		List<Employee> employeeList =  find(ENTITY_SQL, null);
+		List<SelectedField> selectedFields = dataFetchingEnvironment.getSelectionSet().getFields("*");
+		List<DbField> additionalFields = new ArrayList<DbField>();
+		additionalFields.add(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
+		SqlQuery query = queryBuilder.createQueryforTable(EmpTableEnum.EMPLOYEES, 
+			selectedFields, additionalFields, null, SqlOperatorEnum.AND);
+		List<Employee> employeeList = find(query);
 		
-		List<Job> jobList = jobService.findByEmployees(employeeList);
+		List<Job> jobList = jobService.findByEmployees(dataFetchingEnvironment, employeeList);
 		for (int i=0; i<employeeList.size(); i++) {
 			Employee emp = employeeList.get(i);
 			List<Job> filteredList = jobList.stream()
@@ -87,16 +135,21 @@ public class EmployeeService {
 		return employeeList;
 	}
 
-	public List<Employee> findByJobs(List<Job> jobList) {
-		List<String> idList = new ArrayList<String>();
+	public List<Employee> findByJobs(List<Job> jobList, List<SelectedField> selectedEmpFields) {
+		List<String> jobIdList = new ArrayList<String>();
 		for (int i=0; i<jobList.size(); i++) {
 			Job job = jobList.get(i);
-			idList.add(job.getId());
+			jobIdList.add(job.getId());
 		}
-		JdbcArgInfo argInfo = new JdbcArgInfo();
-		argInfo.addStringTableArg("jobIds", idList);
+		DbField field = empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID);
+		List<QueryConstraint> constraintList = new ArrayList<QueryConstraint>();
+		StringConstraint jobIdConstraint = new StringConstraint(1, field, StringOperatorEnum.IN, jobIdList);
+		constraintList.add(jobIdConstraint);
 		
-		String whereClause = ENTITY_SQL + " where job_id in (select column_value as job_id from table(:p1))"; 
-		return find(whereClause, argInfo);
+		List<DbField> additionalFields = new ArrayList<DbField>();
+		additionalFields.add(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
+		SqlQuery query = queryBuilder.createQueryforTable(EmpTableEnum.EMPLOYEES, selectedEmpFields, additionalFields, 
+			constraintList, SqlOperatorEnum.AND);
+		return find(query);
 	}
 }
