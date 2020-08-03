@@ -63,18 +63,16 @@ create or replace package body get_data_pkg as
         'Error persing: ' || tmpArg || '-' || tmpToken || '(' || tmpToken2StartPos || ',' || tmpToken3StartPos || ',' || tmpToken4StartPos || '): ' || sqlerrm);
   end get_arg_table;
   
-  function get_bind_table(aArgInfo in varchar2_200_table, aArgNumberList in number_table, aArgCharList in varchar2_200_table) return bind_table is
+  function get_bind_table(aArgTable in arg_table, aArgNumberList in number_table, aArgCharList in varchar2_200_table) return bind_table is
     tmpBindTable bind_table := bind_table();
     tmpBindRec bind_rec;
     tmpEmptyBindRec bind_rec;
-    tmpArgTable arg_table;
     tmpArgRec arg_rec;
     tmpCharTable varchar2_200_table;
     tmpNumberTable number_table;
   begin 
-    tmpArgTable := get_arg_table(aArgInfo);
-    for i in 1..tmpArgTable.count loop
-      tmpArgRec := tmpArgTable(i);
+    for i in 1..aArgTable.count loop
+      tmpArgRec := aArgTable(i);
       
       tmpBindRec := tmpEmptyBindRec;
       tmpBindRec.valueType := tmpArgRec.valueType;
@@ -152,21 +150,88 @@ create or replace package body get_data_pkg as
     return tmpCur;  
   end getCur;
 
+  function num_tbl_to_clob(aTbl in number_table, aSeparator in varchar2, aMaxCount in number) return clob is
+    tmpRet clob;
+    tmpVal varchar2(100);
+    tmpCount number := least(aMaxCount, aTbl.count);
+  begin
+    DBMS_LOB.CREATETEMPORARY(tmpRet, true, DBMS_LOB.SESSION);
+    for i in 1..tmpCount loop
+      if i > 1 then
+        dbms_lob.writeappend(tmpRet, length(aSeparator), aSeparator);
+      end if;
+      tmpVal := to_char(aTbl(i));
+      dbms_lob.writeappend(tmpRet, length(tmpVal), tmpVal);
+    end loop;
+    return tmpRet;
+  end num_tbl_to_clob;
+
+  function char_tbl_to_clob(aTbl in varchar2_200_table, aSeparator in varchar2, aMaxCount in number) return clob is
+    tmpRet clob;
+    tmpVal varchar2(200);
+    tmpCount number := least(aMaxCount, aTbl.count);
+  begin
+    DBMS_LOB.CREATETEMPORARY(tmpRet, true, DBMS_LOB.SESSION);
+    for i in 1..tmpCount loop
+      if i > 1 then
+        dbms_lob.writeappend(tmpRet, length(aSeparator), aSeparator);
+      end if;
+      dbms_lob.writeappend(tmpRet, length(aTbl(i)), aTbl(i));
+    end loop;
+    return tmpRet;
+  end char_tbl_to_clob;
+  
+  function createLogArgs(aArgTable in arg_table, aBindTable in bind_table) return clob is
+    tmpArgRec arg_rec;
+    tmpBindRec bind_rec;
+    tmpRet clob := '*** ArgInfo:' || chr(10);
+  begin
+    for i in 1..aArgTable.count loop
+      tmpArgRec := aArgTable(i);
+      tmpBindRec := aBindTable(i);
+      
+      tmpRet := tmpRet || '*** ' || tmpArgRec.argName || '(Value count=' || tmpArgRec.valueCount || '): ';
+      if tmpArgRec.valueType = 'String' then
+        tmpRet := tmpRet || tmpBindRec.varcharVal;
+      elsif tmpArgRec.valueType = 'StringBetween' then
+        tmpRet := tmpRet || tmpBindRec.varcharVal || ',' || tmpBindRec.varcharVal2;
+      elsif tmpArgRec.valueType = 'StringTable' then
+        tmpRet := char_tbl_to_clob(tmpBindRec.varcharTableVal, ',', 10);
+      elsif tmpArgRec.valueType = 'Number' then
+        tmpRet := tmpRet || tmpBindRec.numberVal;
+      elsif tmpArgRec.valueType = 'NumberBetween' then
+        tmpRet := tmpRet || tmpBindRec.numberVal || ',' || tmpBindRec.numberVal2;
+      elsif tmpArgRec.valueType = 'NumberTable' then
+        tmpRet := tmpRet || num_tbl_to_clob(tmpBindRec.numberTableVal, ',', 10);
+      end if;
+      tmpRet := tmpRet || chr(10);
+    end loop;
+    return tmpRet;
+  end createLogArgs;
+  
   function get_data(aSql in clob, aArgInfo in varchar2_200_table, aArgNumberList in number_table, aArgCharList in varchar2_200_table) return sys_refcursor is
     PRAGMA AUTONOMOUS_TRANSACTION;
     tmpCur sys_refcursor;
     tmpLastNamePart varchar2(200);
     tmpEmpIdTable number_table;
     tmpLogArgs clob;
-    tmpTimeStart number := dbms_utility.get_time;
+    tmpLogArgsDetails clob;
     tmpSql clob;
     tmpTimeDiff number;
     tmpBindTable bind_table;
+    tmpArgTable arg_table;
+    tmpTimeStart number := dbms_utility.get_time;
   begin
-    tmpBindTable := get_bind_table(aArgInfo, aArgNumberList, aArgCharList);
-    tmpTimeDiff := (dbms_utility.get_time - tmpTimeStart) / 100;
+    tmpArgTable := get_arg_table(aArgInfo);
+    tmpBindTable := get_bind_table(tmpArgTable, aArgNumberList, aArgCharList);
+    tmpTimeDiff := (dbms_utility.get_time - tmpTimeStart) * 10;
+    tmpLogArgs := 'Time2Split[ms]:' || tmpTimeDiff;
     
-    SELECT 'Time2Parsde[s]:' || tmpTimeDiff || LISTAGG(column_value, ',') WITHIN GROUP (order by null) into tmpLogArgs from table(aArgInfo);
+    tmpTimeStart := dbms_utility.get_time;
+    tmpLogArgsDetails := createLogArgs(tmpArgTable, tmpBindTable);
+    tmpTimeDiff := (dbms_utility.get_time - tmpTimeStart) * 10; 
+    tmpLogArgs := tmpLogArgs || chr(10) || 'Time2Log[ms]:' || tmpTimeDiff || chr(10) || tmpLogArgsDetails;
+
     insert into sql_log(log_date, sql, args) values (sysdate, aSql, tmpLogArgs);
     commit;
     

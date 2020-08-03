@@ -73,7 +73,7 @@ public class JdbcArgInfo {
 		JdbcArg jdbcArg = new JdbcArg();
 		jdbcArg.setArgName(argName);
 		jdbcArg.setValueCount(2);
-		jdbcArg.setValueStartIndex(stringArgs.size() + 1);
+		jdbcArg.setValueStartIndex(numberArgs.size() + 1);
 		jdbcArg.setValueType(VALUE_TYPE.NumberBetween);
 		args.add(jdbcArg);
 		numberArgs.add(argValue1);
