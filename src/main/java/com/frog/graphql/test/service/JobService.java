@@ -11,17 +11,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.frog.graphql.test.emp.querybuilder.EmpQueryBuilder;
+import com.frog.graphql.test.emp.querybuilder.EmpQueryBuilderArgs;
 import com.frog.graphql.test.emp.repository.EmpFieldEnum;
 import com.frog.graphql.test.emp.repository.EmpRepository;
 import com.frog.graphql.test.emp.repository.EmpTableEnum;
-import com.frog.graphql.test.jdbc.JdbcArgInfo;
 import com.frog.graphql.test.jdbc.JdbcService;
 import com.frog.graphql.test.pojo.Employee;
 import com.frog.graphql.test.pojo.Job;
 import com.frog.graphql.test.querybuilder.DbField;
 import com.frog.graphql.test.querybuilder.SqlQuery;
-import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
-import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
 import com.frog.graphql.test.querybuilder.constraint.StringConstraint;
 import com.frog.graphql.test.querybuilder.constraint.StringOperatorEnum;
 
@@ -81,8 +79,10 @@ public class JobService {
 	}
 
 	public List<Job> findAll(DataFetchingEnvironment dataFetchingEnvironment) {
-		List<SelectedField> selectedFields = dataFetchingEnvironment.getSelectionSet().getFields("*");
-		SqlQuery query = queryBuilder.createQueryforTable(EmpTableEnum.JOBS, selectedFields, null, null, SqlOperatorEnum.AND);
+		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.JOBS);
+		List<SelectedField> selectedGraphQlFields = dataFetchingEnvironment.getSelectionSet().getFields("*");
+		args.setSelectedGraphQlFields(selectedGraphQlFields);
+		SqlQuery query = queryBuilder.createQueryforTable(args);
 		List<Job> jobList = find(query);
 		
 		List<SelectedField> selectedEmpFields = dataFetchingEnvironment.getSelectionSet().getFields("employees/*");
@@ -97,19 +97,18 @@ public class JobService {
 	}
 
 	public List<Job> findByEmployees(DataFetchingEnvironment dataFetchingEnvironment, List<Employee> employeeList) {
+		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.JOBS);
+		args.setSelectedGraphQlFields(dataFetchingEnvironment.getSelectionSet().getFields("job/*"));
+		
+		DbField jobIdField = empRepository.getFields().get(EmpFieldEnum.JOBS_JOB_ID);
 		List<String> jobIdList = new ArrayList<String>();
 		for (int i=0; i<employeeList.size(); i++) {
 			Employee emp = employeeList.get(i);
 			jobIdList.add(emp.getJobId());
 		}		
-		DbField field = empRepository.getFields().get(EmpFieldEnum.JOBS_JOB_ID);
-		List<QueryConstraint> constraintList = new ArrayList<QueryConstraint>();
-		StringConstraint jobIdConstraint = new StringConstraint(1, field, StringOperatorEnum.IN, jobIdList);
-		constraintList.add(jobIdConstraint);
+		args.addConstraint(new StringConstraint(1, jobIdField, StringOperatorEnum.IN, jobIdList));
 		
-		List<SelectedField> selectedFields = dataFetchingEnvironment.getSelectionSet().getFields("job/*");
-		SqlQuery query = queryBuilder.createQueryforTable(EmpTableEnum.JOBS, selectedFields, null,
-			constraintList, SqlOperatorEnum.AND);
+		SqlQuery query = queryBuilder.createQueryforTable(args);
 		return find(query);
 	}
 }

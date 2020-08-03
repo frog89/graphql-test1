@@ -1,14 +1,7 @@
 package com.frog.graphql.test.querybuilder;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.List;
-
 import com.frog.graphql.test.jdbc.JdbcArgInfo;
 import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
-import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
-import com.frog.graphql.test.querybuilder.constraint.SqlOperatorGroup;
-import com.frog.graphql.test.util.Node;
 
 public class QueryBuilder {
 //	public SqlQuery createQuery(List<DbField> selectFieldList, List<SqlJoin> joinList, 
@@ -29,20 +22,19 @@ public class QueryBuilder {
 //		return null;
 //	}
 
-	public SqlQuery createQuery(List<DbField> selectFieldList, SqlFrom from, 
-			List<QueryConstraint> constraintList, SqlOperatorEnum sqlOperator) {
+	public SqlQuery createQuery(QueryBuilderArgs args) {
 		StringBuffer sql = new StringBuffer();
 		sql.append("select ");
 		
 		StringBuffer fields = new StringBuffer();
-		for (DbField field : selectFieldList) {
+		for (DbField field : args.getSelectFieldList()) {
 			if (fields.length() > 0) {
 				fields.append(", ");
 			}
-			if (field.getDbAlias() == null) {
+			if (field.getFieldAlias() == null) {
 				fields.append(field.getFullName());
 			} else {				
-				fields.append(String.format("%s as %s", field.getFieldName(), field.getDbAlias()));
+				fields.append(String.format("%s as %s", field.getFieldName(), field.getFieldAlias()));
 			}
 		}
 		
@@ -50,20 +42,22 @@ public class QueryBuilder {
 		sql.append("\n");
 		
 		StringBuffer joinBuffer = new StringBuffer();
-		joinBuffer.append(String.format("from %s %s\n", from.getFromTable().getDbExpression(), from.getFromTable().getDbAlias()));
-		if (from.getJoinList() != null) {
-			for (SqlJoin join : from.getJoinList()) {
+		joinBuffer.append(String.format("from %s %s\n", 
+			args.getFrom().getFromTable().getDbExpression(), 
+			args.getFrom().getFromTable().getDbAlias()));
+		if (args.getFrom().getJoinList() != null) {
+			for (SqlJoin join : args.getFrom().getJoinList()) {
 				joinBuffer.append(String.format("%s\n", join.getJoinClause()));
 			}			
 		}
 		sql.append(joinBuffer.toString());
 		
 		JdbcArgInfo argInfo = new JdbcArgInfo();
-		if (constraintList != null && constraintList.size() > 0) {
+		if (args.getConstraintList() != null && args.getConstraintList().size() > 0) {
 			StringBuffer whereBuffer = new StringBuffer();
-			for (QueryConstraint constraint : constraintList) {
+			for (QueryConstraint constraint : args.getConstraintList()) {
 				if (whereBuffer.length() > 0) {
-					whereBuffer.append(String.format(" %s ", sqlOperator.name()));
+					whereBuffer.append(String.format(" %s ", args.getSqlOperator().name()));
 				}
 				whereBuffer.append(constraint.getSqlClause());
 				constraint.addArgsTo(argInfo);
@@ -71,9 +65,15 @@ public class QueryBuilder {
 			sql.append("where ");
 			sql.append(whereBuffer.toString());			
 		}
+		if (args.getExecutionParameters().getPageOffsetRowCount() > 0) {
+			sql.append(String.format(" offset %d rows", args.getExecutionParameters().getPageOffsetRowCount()));
+		}
+		if (args.getExecutionParameters().getPageRowCount() > 0) {
+			sql.append(String.format(" fetch next %d rows only", args.getExecutionParameters().getPageRowCount()));
+		}
 		
 		SqlQuery sqlQuery = new SqlQuery();
-		sqlQuery.setSelectFieldList(selectFieldList);
+		sqlQuery.setSelectFieldList(args.getSelectFieldList());
 		sqlQuery.setSql(sql.toString());
 		sqlQuery.setArgInfo(argInfo);
 		return sqlQuery;

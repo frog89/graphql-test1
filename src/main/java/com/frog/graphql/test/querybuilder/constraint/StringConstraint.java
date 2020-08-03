@@ -44,7 +44,7 @@ public class StringConstraint extends QueryConstraint {
 		} else if (operator == StringOperatorEnum.LESS) {
 			return String.format("%s < :p%d", field.getFullName(), getConstraintIndex());	
 		} else if (operator == StringOperatorEnum.BETWEEN) {
-			return String.format("%s between :p%d-v1 and :p%d-v2", field.getFullName(), getConstraintIndex());	
+			return String.format("%s between :p%d_v1 and :p%d_v2", field.getFullName(), getConstraintIndex());	
 		} else if (operator == StringOperatorEnum.IN) {
 			return String.format("%s in (select column_value from table(:p%d))", field.getFullName(), getConstraintIndex());
 		}

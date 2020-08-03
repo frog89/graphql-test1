@@ -3,6 +3,7 @@ package com.frog.graphql.test.service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -11,17 +12,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.frog.graphql.test.emp.querybuilder.EmpQueryBuilder;
+import com.frog.graphql.test.emp.querybuilder.EmpQueryBuilderArgs;
 import com.frog.graphql.test.emp.repository.EmpFieldEnum;
 import com.frog.graphql.test.emp.repository.EmpRepository;
 import com.frog.graphql.test.emp.repository.EmpTableEnum;
-import com.frog.graphql.test.jdbc.JdbcArgInfo;
 import com.frog.graphql.test.jdbc.JdbcService;
 import com.frog.graphql.test.pojo.Employee;
 import com.frog.graphql.test.pojo.Job;
 import com.frog.graphql.test.querybuilder.DbField;
 import com.frog.graphql.test.querybuilder.SqlQuery;
-import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
-import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
+import com.frog.graphql.test.querybuilder.constraint.NumericConstraint;
+import com.frog.graphql.test.querybuilder.constraint.NumericOperatorEnum;
 import com.frog.graphql.test.querybuilder.constraint.StringConstraint;
 import com.frog.graphql.test.querybuilder.constraint.StringOperatorEnum;
 
@@ -41,37 +42,6 @@ public class EmployeeService {
 
 	@Autowired
 	private EmpRepository empRepository;
-	
-	public List<Employee> find(String sql, JdbcArgInfo argInfo) {
-		final ArrayList<Employee> list = new ArrayList<Employee>();
-//		String sql = "select employee_id, first_name, last_name from hr.employees " +
-//			"where lower(last_name) like '%' || lower(:2) || '%' and " +
-//			"employee_id in (select column_value from table(:1))";
-		try {
-			Consumer<ResultSet> consumer = new Consumer<ResultSet>() {
-				@Override
-				public void accept(ResultSet rs) {
-					Employee emp = new Employee();
-					try {
-						emp.setId(rs.getLong(1));
-						emp.setFirstName(rs.getString(2));
-						emp.setLastName(rs.getString(3));
-						emp.setJobId(rs.getString(4));						
-						list.add(emp);
-					} catch (SQLException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			};
-
-			jdbcService.consumeData(sql, argInfo, consumer);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return list;
-	}
 	
 	public List<Employee> find(SqlQuery query) {
 		List<DbField> selectFields = query.getSelectFieldList();
@@ -93,6 +63,8 @@ public class EmployeeService {
 								emp.setLastName(rs.getString(i));
 							} else if (fieldEnum == EmpFieldEnum.EMPLOYEES_JOB_ID) {
 								emp.setJobId(rs.getString(i));						
+							} else if (fieldEnum == EmpFieldEnum.EMPLOYEES_SALARY) {
+								emp.setSalary(rs.getDouble(i));						
 							}
 						}
 						list.add(emp);
@@ -113,11 +85,31 @@ public class EmployeeService {
 
 
 	public List<Employee> findAll(DataFetchingEnvironment dataFetchingEnvironment) {
-		List<SelectedField> selectedFields = dataFetchingEnvironment.getSelectionSet().getFields("*");
-		List<DbField> additionalFields = new ArrayList<DbField>();
-		additionalFields.add(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
-		SqlQuery query = queryBuilder.createQueryforTable(EmpTableEnum.EMPLOYEES, 
-			selectedFields, additionalFields, null, SqlOperatorEnum.AND);
+		Integer testIdCount = dataFetchingEnvironment.getArgument("testIdCount");
+		Double salaryBetweenLower = dataFetchingEnvironment.getArgument("salaryBetweenLower");
+		Double salaryBetweenHigher = dataFetchingEnvironment.getArgument("salaryBetweenHigher");
+		
+		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.EMPLOYEES);
+		args.addAdditionalSelectedField(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
+		args.setSelectedGraphQlFields(dataFetchingEnvironment.getSelectionSet().getFields("*"));
+
+		int constraintIndex = 1;
+		if (testIdCount != null) {
+			DbField empIdField = empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_EMPLOYEE_ID);
+			List<Double> idList = new ArrayList<Double>();
+			for (int i=0; i<testIdCount; i++) {
+				idList.add(new Double(i));
+			}
+			args.addConstraint(new NumericConstraint(constraintIndex++, empIdField, NumericOperatorEnum.IN, idList));
+		}
+		
+		if (salaryBetweenLower != null && salaryBetweenHigher != null) {
+			DbField salaryField = empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_SALARY);
+			args.addConstraint(new NumericConstraint(constraintIndex++, salaryField, NumericOperatorEnum.BETWEEN, 
+				Arrays.asList(salaryBetweenLower, salaryBetweenHigher)));
+		}
+
+		SqlQuery query = queryBuilder.createQueryforTable(args);
 		List<Employee> employeeList = find(query);
 		
 		List<Job> jobList = jobService.findByEmployees(dataFetchingEnvironment, employeeList);
@@ -136,20 +128,18 @@ public class EmployeeService {
 	}
 
 	public List<Employee> findByJobs(List<Job> jobList, List<SelectedField> selectedEmpFields) {
+		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.EMPLOYEES);
+		args.addAdditionalSelectedField(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
+		
+		DbField jobIdField = empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID);
 		List<String> jobIdList = new ArrayList<String>();
 		for (int i=0; i<jobList.size(); i++) {
 			Job job = jobList.get(i);
 			jobIdList.add(job.getId());
 		}
-		DbField field = empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID);
-		List<QueryConstraint> constraintList = new ArrayList<QueryConstraint>();
-		StringConstraint jobIdConstraint = new StringConstraint(1, field, StringOperatorEnum.IN, jobIdList);
-		constraintList.add(jobIdConstraint);
+		args.addConstraint(new StringConstraint(1, jobIdField, StringOperatorEnum.IN, jobIdList));
 		
-		List<DbField> additionalFields = new ArrayList<DbField>();
-		additionalFields.add(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
-		SqlQuery query = queryBuilder.createQueryforTable(EmpTableEnum.EMPLOYEES, selectedEmpFields, additionalFields, 
-			constraintList, SqlOperatorEnum.AND);
+		SqlQuery query = queryBuilder.createQueryforTable(args);
 		return find(query);
 	}
 }

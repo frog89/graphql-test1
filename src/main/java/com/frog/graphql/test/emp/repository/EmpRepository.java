@@ -55,6 +55,8 @@ public class EmpRepository {
 			"lastName", "LAST_NAME", FieldTypeEnum.STRING, null, tables.get(EmpTableEnum.EMPLOYEES)));
 		addField(new DbField(EmpFieldEnum.toOrdinalString(EmpFieldEnum.EMPLOYEES_JOB_ID), 
 			"jobId", "JOB_ID", FieldTypeEnum.STRING, null, tables.get(EmpTableEnum.EMPLOYEES)));
+		addField(new DbField(EmpFieldEnum.toOrdinalString(EmpFieldEnum.EMPLOYEES_SALARY), 
+			"salary", "SALARY", FieldTypeEnum.DOUBLE, null, tables.get(EmpTableEnum.EMPLOYEES)));
 
 		addField(new DbField(EmpFieldEnum.toOrdinalString(EmpFieldEnum.JOBS_JOB_ID), 
 			"id", "JOB_ID", FieldTypeEnum.STRING, null, tables.get(EmpTableEnum.JOBS)));

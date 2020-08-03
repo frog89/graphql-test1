@@ -12,11 +12,12 @@ public class DbField {
 	private final String graphQlAlias;
 	private final String fieldName;
 	private final FieldTypeEnum fieldTypeEnum;
-	private String dbAlias;
+	private String fieldAlias;
 	private DbTable table;
 	
 	public String getFullName() {
-		return String.format("%s.%s", getTable().getDbAlias(), fieldName);
+		String tableAlias = getTable() == null ? "<table is null>" : getTable().getDbAlias(); 
+		return String.format("%s.%s", tableAlias, fieldName);
 	}
 	
 	@Override

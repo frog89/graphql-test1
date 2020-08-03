@@ -1,6 +1,7 @@
 package com.frog.graphql.test.querybuilder.constraint;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.frog.graphql.test.jdbc.JdbcArgInfo;
@@ -9,24 +10,24 @@ import com.frog.graphql.test.querybuilder.DbField;
 import lombok.Data;
 
 @Data
-public class NuericConstraint extends QueryConstraint {
+public class NumericConstraint extends QueryConstraint {
 	private String sqlExpression;
 	private DbField field;
 	private NumericOperatorEnum operator;
 	private List<Double> values;
 	
-	public NuericConstraint(int oneBasedConstraintIndex, DbField field, NumericOperatorEnum operator, List<Double> values) {
+	public NumericConstraint(int oneBasedConstraintIndex, DbField field, NumericOperatorEnum operator, List<Double> values) {
 		super(oneBasedConstraintIndex);
 		this.field = field;
 		this.operator = operator;
 		this.values = values;
 	}
 
-	public NuericConstraint(int oneBasedConstraintIndex, DbField field, NumericOperatorEnum operator, Double value) {
+	public NumericConstraint(int oneBasedConstraintIndex, DbField field, NumericOperatorEnum operator, Double value) {
 		this(oneBasedConstraintIndex, field, operator, new ArrayList<Double>());
 		values.add(value);
 	}
-	
+
 	@Override
 	public String getSqlClause() {
 		if (operator == NumericOperatorEnum.SQL_EXPRESSION) {
@@ -38,7 +39,7 @@ public class NuericConstraint extends QueryConstraint {
 		} else if (operator == NumericOperatorEnum.LESS) {
 			return String.format("%s < :p%d", field.getFullName(), getConstraintIndex());	
 		} else if (operator == NumericOperatorEnum.BETWEEN) {
-			return String.format("%s between :p%d-v1 and :p%d-v2", field.getFullName(), getConstraintIndex(), getConstraintIndex());	
+			return String.format("%s between :p%d_v1 and :p%d_v2", field.getFullName(), getConstraintIndex(), getConstraintIndex());	
 		} else if (operator == NumericOperatorEnum.IN) {
 			return String.format("%s in (select column_value from table(:p%d))", field.getFullName(), getConstraintIndex());
 		}

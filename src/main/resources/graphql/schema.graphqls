@@ -2,6 +2,7 @@ type Employee {
   id: ID!
   firstName: String
   lastName: String
+  salary: Float
   job: Job
 }
 
@@ -16,7 +17,7 @@ type Job {
 union All = Employee | Job
 
 type Query {
-  allEmps: [Employee]
+  allEmps(testIdCount: Int, salaryBetweenLower: Float, salaryBetweenHigher: Float): [Employee]
   allJobs: [Job]
   allAll: [All]
 }

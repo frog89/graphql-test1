@@ -11,6 +11,7 @@ public class Employee {
 	private String firstName;
 	private String lastName;
 	private String jobId;
+	private Double salary;
 	
 	private List<Job> jobList;
 	

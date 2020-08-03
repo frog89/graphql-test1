@@ -6,16 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.frog.graphql.test.emp.repository.EmpRepository;
-import com.frog.graphql.test.emp.repository.EmpTableEnum;
 import com.frog.graphql.test.querybuilder.DbField;
 import com.frog.graphql.test.querybuilder.DbTable;
 import com.frog.graphql.test.querybuilder.QueryBuilder;
-import com.frog.graphql.test.querybuilder.SqlFrom;
+import com.frog.graphql.test.querybuilder.QueryBuilderArgs;
 import com.frog.graphql.test.querybuilder.SqlQuery;
-import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
-import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
-
-import graphql.schema.SelectedField;
 
 @Component
 public class EmpQueryBuilder {
@@ -41,17 +36,17 @@ public class EmpQueryBuilder {
 		}			
 	}
 	
-	public SqlQuery createQueryforTable(EmpTableEnum tableEnum, 
-			List<SelectedField> selectedGraphQlFields,
-			List<DbField> additionalSelectedFields,
-			List<QueryConstraint> constraintList, SqlOperatorEnum sqlOperator) {
-		DbTable table = empRepository.getTables().get(tableEnum);
-		List<DbField> selectFieldList = table.findFields(selectedGraphQlFields);
-		addAdditionalFields(selectFieldList, additionalSelectedFields);
+	public SqlQuery createQueryforTable(EmpQueryBuilderArgs args) {
+		DbTable table = empRepository.getTables().get(args.getTableEnum());
+		List<DbField> selectFieldList = table.findFields(args.getSelectedGraphQlFields());
+		addAdditionalFields(selectFieldList, args.getAdditionalSelectedFieldList());
 		
-		QueryBuilder builder = new QueryBuilder();
-		SqlFrom from = new SqlFrom();
-		from.setFromTable(table);
-		return builder.createQuery(selectFieldList, from, constraintList, sqlOperator);
+		QueryBuilder sqlBuilder = new QueryBuilder();
+		QueryBuilderArgs sqlBuilderArgs = new QueryBuilderArgs();
+		sqlBuilderArgs.getFrom().setFromTable(table);
+		sqlBuilderArgs.addSelectFieldList(selectFieldList);
+		sqlBuilderArgs.addConstraintList(args.getConstraintList());
+		
+		return sqlBuilder.createQuery(sqlBuilderArgs);
 	}
 }
