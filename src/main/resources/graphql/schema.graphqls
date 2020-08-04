@@ -17,9 +17,21 @@ type Job {
 union All = Employee | Job
 
 type Query {
-  allEmps(testIdCount: Int, salaryBetweenLower: Float, salaryBetweenHigher: Float): [Employee]
+  allEmps(searchParams: EmpSearchParams): [Employee]
   allJobs: [Job]
   allAll: [All]
+}
+
+input EmpSearchParams {
+  testIdCount: Int
+  salaryBetweenLower: Float
+  salaryBetweenHigher: Float
+  queryOperator: QueryOperatorEnum = AND
+}
+
+enum QueryOperatorEnum {
+  AND,
+  OR
 }
 
 schema {

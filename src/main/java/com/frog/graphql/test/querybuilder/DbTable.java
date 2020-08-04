@@ -1,6 +1,7 @@
 package com.frog.graphql.test.querybuilder;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import graphql.schema.GraphQLList;
@@ -34,6 +35,11 @@ public class DbTable {
 
 	public List<DbField> findFields(List<SelectedField> selectedGraphQlFields) {
 		List<DbField> selectFieldList = new ArrayList<DbField>();
+		
+		if (selectedGraphQlFields == null) {
+			return selectFieldList; 
+		}
+		
 		for (SelectedField graphQlField : selectedGraphQlFields) {
 			if (graphQlField.getFieldDefinition().getType() instanceof GraphQLList) {
 				continue;

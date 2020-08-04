@@ -4,29 +4,9 @@ import com.frog.graphql.test.jdbc.JdbcArgInfo;
 import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
 
 public class QueryBuilder {
-//	public SqlQuery createQuery(List<DbField> selectFieldList, List<SqlJoin> joinList, 
-//			List<QueryConstraint> constraintList, 
-//			Node<SqlOperatorGroup> sqlOperatorGroup) {
-//
-//		Hashtable<Integer, List<QueryConstraint>> groupIndexTable = new Hashtable<Integer, List<QueryConstraint>>(); 
-//		for (QueryConstraint constraint : constraintList) {
-//			List<QueryConstraint> groupConstraints = null;
-//			if (groupIndexTable.containsKey(constraint.getOperatorGroupIndex())) {
-//				groupConstraints = groupIndexTable.get(constraint.getOperatorGroupIndex()); 
-//			} else {
-//				groupConstraints = new ArrayList<QueryConstraint>();
-//			}
-//			groupConstraints.add(constraint);
-//		}
-//		
-//		return null;
-//	}
-
-	public SqlQuery createQuery(QueryBuilderArgs args) {
-		StringBuffer sql = new StringBuffer();
-		sql.append("select ");
-		
+	private String createFieldClause(QueryBuilderArgs args) {
 		StringBuffer fields = new StringBuffer();
+		
 		for (DbField field : args.getSelectFieldList()) {
 			if (fields.length() > 0) {
 				fields.append(", ");
@@ -38,42 +18,93 @@ public class QueryBuilder {
 			}
 		}
 		
-		sql.append(fields.toString());
-		sql.append("\n");
-		
+		return fields.toString();
+	}
+
+	private String createFromClause(QueryBuilderArgs args) {
 		StringBuffer joinBuffer = new StringBuffer();
-		joinBuffer.append(String.format("from %s %s\n", 
-			args.getFrom().getFromTable().getDbExpression(), 
-			args.getFrom().getFromTable().getDbAlias()));
+		
 		if (args.getFrom().getJoinList() != null) {
+			if (joinBuffer.length() > 0) {
+				joinBuffer.append("\n");
+			}
 			for (SqlJoin join : args.getFrom().getJoinList()) {
-				joinBuffer.append(String.format("%s\n", join.getJoinClause()));
+				joinBuffer.append(join.getJoinClause());
 			}			
 		}
-		sql.append(joinBuffer.toString());
 		
-		JdbcArgInfo argInfo = new JdbcArgInfo();
-		if (args.getConstraintList() != null && args.getConstraintList().size() > 0) {
-			StringBuffer whereBuffer = new StringBuffer();
-			for (QueryConstraint constraint : args.getConstraintList()) {
-				if (whereBuffer.length() > 0) {
-					whereBuffer.append(String.format(" %s ", args.getSqlOperator().name()));
-				}
-				whereBuffer.append(constraint.getSqlClause());
-				constraint.addArgsTo(argInfo);
-			}
-			sql.append("where ");
-			sql.append(whereBuffer.toString());			
+		StringBuffer fromBuffer = new StringBuffer(); 
+		
+		fromBuffer.append(String.format("%s %s", 
+			args.getFrom().getFromTable().getDbExpression(), 
+			args.getFrom().getFromTable().getDbAlias()));
+		if (joinBuffer.length() > 0) {
+			fromBuffer.append("\n");
+			fromBuffer.append(joinBuffer);
 		}
+		
+		return fromBuffer.toString();
+	}
+
+	private String createWhereClause(QueryBuilderArgs args) {
+		StringBuffer whereBuffer = new StringBuffer();
+
+		for (QueryConstraint constraint : args.getConstraintList()) {
+			if (whereBuffer.length() > 0) {
+				whereBuffer.append(" and ");
+			}
+			whereBuffer.append(constraint.getSqlClause());
+		}
+		
+		return whereBuffer.toString();
+	}
+	
+	private String createPageClause(QueryBuilderArgs args) {
+		StringBuffer pageBuffer = new StringBuffer();
 		if (args.getExecutionParameters().getPageOffsetRowCount() > 0) {
-			sql.append(String.format(" offset %d rows", args.getExecutionParameters().getPageOffsetRowCount()));
+			pageBuffer.append(String.format(" offset %d rows", args.getExecutionParameters().getPageOffsetRowCount()));
 		}
 		if (args.getExecutionParameters().getPageRowCount() > 0) {
-			sql.append(String.format(" fetch next %d rows only", args.getExecutionParameters().getPageRowCount()));
+			pageBuffer.append(String.format(" fetch next %d rows only", args.getExecutionParameters().getPageRowCount()));
+		}
+		return pageBuffer.toString();
+	}
+	
+	private String createSql(String fieldClause, String fromClause, String whereClause, String pageClause) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("select ");
+		sql.append(fieldClause);
+		sql.append("\nfrom ");
+		sql.append(fromClause);
+		sql.append("\nwhere ");
+		sql.append(whereClause);
+		if (pageClause.length() > 0) {
+			sql.append("\n");
+			sql.append(pageClause);			
+		}
+		return sql.toString();
+	}
+	
+	public SqlQuery createQuery(QueryBuilderArgs args) {
+		String fieldClause = createFieldClause(args);
+		String fromClause = createFromClause(args);
+		String pageClause = createPageClause(args);
+		String whereClause = createWhereClause(args);
+		
+		JdbcArgInfo argInfo = new JdbcArgInfo();
+		for (QueryConstraint constraint : args.getConstraintList()) {
+			constraint.addArgsTo(argInfo);
 		}
 		
+		String sql = createSql(fieldClause, fromClause, whereClause, pageClause);
+				
 		SqlQuery sqlQuery = new SqlQuery();
 		sqlQuery.setSelectFieldList(args.getSelectFieldList());
+		sqlQuery.setFrom(args.getFrom());
+		sqlQuery.setFieldClause(fieldClause);
+		sqlQuery.setFromClause(fromClause);
+		sqlQuery.setWhereClause(whereClause);
+		sqlQuery.setPageClause(pageClause);
 		sqlQuery.setSql(sql.toString());
 		sqlQuery.setArgInfo(argInfo);
 		return sqlQuery;

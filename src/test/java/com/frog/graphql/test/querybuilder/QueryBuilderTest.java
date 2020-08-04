@@ -1,5 +1,7 @@
 package com.frog.graphql.test.querybuilder;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,10 +40,9 @@ class QueryBuilderTest {
 		return table;
 	}
 	
-	@Test
-	void testCreateQuery() {
+	private QueryBuilderArgs createQueryExampleArgs() {
 		QueryBuilderArgs args = new QueryBuilderArgs();
-		QueryBuilder builder = new QueryBuilder();
+		
 		DbTable t1 = createTable(0, "mytable1", "t1", 2, 3);
 		DbTable t2 = createTable(0, "mytable2", "t2", 2, 3);
 		
@@ -56,9 +57,40 @@ class QueryBuilderTest {
 		selectFieldList.add(t2.getFields().get(1));
 		args.addSelectFieldList(selectFieldList);
 		
-		args.addConstraint(new StringConstraint(1, t2.getFields().get(0), StringOperatorEnum.BEGINS_WITH, "abc"));
+		return args;
+	}
+	
+	@Test
+	void testCreateQuery1() {
+		QueryBuilderArgs args = createQueryExampleArgs();
+		DbTable fromTable = args.getFrom().getFromTable();
+		DbField f0 = fromTable.getFields().get(0);
+		args.addConstraint(new StringConstraint(1, f0, StringOperatorEnum.EQUALS, "abc"));
 		
+		QueryBuilder builder = new QueryBuilder();
 		SqlQuery query = builder.createQuery(args);
 		System.out.println(query.getSql());
+		
+		String expectedWhere = String.format("%s = :p1", f0.getFullName()); 
+		assertEquals(expectedWhere, query.getWhereClause());
+	}
+
+	@Test
+	void testCreateQuery2() {
+		QueryBuilderArgs args = createQueryExampleArgs();
+		DbTable fromTable = args.getFrom().getFromTable();
+		DbField f0 = fromTable.getFields().get(0);
+		DbField f1 = fromTable.getFields().get(1);
+		args.addConstraint(new StringConstraint(1, f0, StringOperatorEnum.BEGINS_WITH, "abc"));
+		args.addConstraint(new StringConstraint(2, f0, StringOperatorEnum.ENDS_WITH, "cde"));
+		args.addConstraint(new StringConstraint(3, f1, StringOperatorEnum.EQUALS, "xy"));
+
+		QueryBuilder builder = new QueryBuilder();	
+		SqlQuery query = builder.createQuery(args);
+		System.out.println(query.getSql());
+		
+		String expectedWhere = String.format("%1$s like :p1 || '%%' and %1$s like '%%' || :p2 and %2$s = :p3", 
+			f0.getFullName(), f1.getFullName()); 
+		assertEquals(expectedWhere, query.getWhereClause());
 	}
 }

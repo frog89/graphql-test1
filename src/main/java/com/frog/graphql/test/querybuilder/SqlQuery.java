@@ -5,11 +5,15 @@ import java.util.List;
 import com.frog.graphql.test.jdbc.JdbcArgInfo;
 
 import lombok.Data;
-import lombok.Getter;
 
 @Data
 public class SqlQuery {
-	@Getter private List<DbField> selectFieldList;
-	@Getter private String sql;
-	@Getter private JdbcArgInfo argInfo;	
+	private List<DbField> selectFieldList;
+	private SqlFrom from;
+	private String fieldClause;
+	private String fromClause;
+	private String whereClause;
+	private String pageClause;
+	private String sql;
+	private JdbcArgInfo argInfo;	
 }

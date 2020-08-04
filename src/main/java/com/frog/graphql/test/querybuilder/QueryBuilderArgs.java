@@ -4,17 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
-import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
 
 import lombok.Getter;
-import lombok.Setter;
 
 public class QueryBuilderArgs {
 	@Getter private List<DbField> selectFieldList; 
 	@Getter private List<QueryConstraint> constraintList;
 	@Getter private SqlFrom from; 
 	@Getter QueryExecutionParameters executionParameters;
-	@Getter @Setter private SqlOperatorEnum sqlOperator = SqlOperatorEnum.AND;
 	
 	public QueryBuilderArgs() {
 		this.selectFieldList = new ArrayList<DbField>();
@@ -23,11 +20,6 @@ public class QueryBuilderArgs {
 		this.executionParameters = new QueryExecutionParameters();
 	}
 	
-	public QueryBuilderArgs(SqlOperatorEnum sqlOperator) {
-		this();
-		this.sqlOperator = sqlOperator;
-	}
-
 	public void addSelectField(DbField field) {
 		this.selectFieldList.add(field);
 	}

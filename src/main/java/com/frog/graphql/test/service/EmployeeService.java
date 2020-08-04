@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -23,6 +24,7 @@ import com.frog.graphql.test.querybuilder.DbField;
 import com.frog.graphql.test.querybuilder.SqlQuery;
 import com.frog.graphql.test.querybuilder.constraint.NumericConstraint;
 import com.frog.graphql.test.querybuilder.constraint.NumericOperatorEnum;
+import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
 import com.frog.graphql.test.querybuilder.constraint.StringConstraint;
 import com.frog.graphql.test.querybuilder.constraint.StringOperatorEnum;
 
@@ -85,11 +87,16 @@ public class EmployeeService {
 
 
 	public List<Employee> findAll(DataFetchingEnvironment dataFetchingEnvironment) {
-		Integer testIdCount = dataFetchingEnvironment.getArgument("testIdCount");
-		Double salaryBetweenLower = dataFetchingEnvironment.getArgument("salaryBetweenLower");
-		Double salaryBetweenHigher = dataFetchingEnvironment.getArgument("salaryBetweenHigher");
+		Map<String, Object> searchParams = (Map<String, Object>)dataFetchingEnvironment.getArgument("searchParams");
+		Integer testIdCount =  (Integer)searchParams.get("testIdCount");
+		Double salaryBetweenLower = (Double)searchParams.get("salaryBetweenLower");
+		Double salaryBetweenHigher = (Double)searchParams.get("salaryBetweenHigher");
+		String queryOperator = (String)searchParams.get("queryOperator");
 		
 		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.EMPLOYEES);
+		if (queryOperator.toUpperCase().equals("OR")) {
+			args.setSqlOperator(SqlOperatorEnum.OR);			
+		}
 		args.addAdditionalSelectedField(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
 		args.setSelectedGraphQlFields(dataFetchingEnvironment.getSelectionSet().getFields("*"));
 
