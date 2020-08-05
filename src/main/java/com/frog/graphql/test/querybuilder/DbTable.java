@@ -32,30 +32,4 @@ public class DbTable {
 	public void addField(DbField field) {
 		fields.add(field);
 	}
-
-	public List<DbField> findFields(List<SelectedField> selectedGraphQlFields) {
-		List<DbField> selectFieldList = new ArrayList<DbField>();
-		
-		if (selectedGraphQlFields == null) {
-			return selectFieldList; 
-		}
-		
-		for (SelectedField graphQlField : selectedGraphQlFields) {
-			if (graphQlField.getFieldDefinition().getType() instanceof GraphQLList) {
-				continue;
-			}
-			for (DbField field : fields) {
-				if (field.getGraphQlAlias().equals(graphQlField.getName())) {
-					selectFieldList.add(field);
-					break;
-				}
-			}
-		}
-		for (DbField keyField : keyFields) {
-			if (!selectFieldList.contains(keyField)) {
-				selectFieldList.add(keyField);
-			}
-		}
-		return selectFieldList;
-	}
 }

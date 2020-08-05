@@ -2,6 +2,7 @@ type Employee {
   id: ID!
   firstName: String
   lastName: String
+  fullName: String
   salary: Float
   job: Job
 }

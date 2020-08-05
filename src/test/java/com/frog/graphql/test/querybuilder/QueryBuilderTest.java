@@ -8,8 +8,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
-import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
 import com.frog.graphql.test.querybuilder.constraint.StringConstraint;
 import com.frog.graphql.test.querybuilder.constraint.StringOperatorEnum;
 
@@ -23,7 +21,7 @@ class QueryBuilderTest {
 		for (int i=0; i<keyFieldCount; i++) {
 			String keyFieldName = String.format("%s_key%d", alias, i);
 			String keyFieldId = String.format("%s_%s", tableIdString, keyFieldName);
-			DbField keyField = new DbField(keyFieldId, keyFieldName, keyFieldName, FieldTypeEnum.STRING);
+			DbField keyField = new DbField(keyFieldId, keyFieldName, FieldTypeEnum.STRING);
 			keyField.setTable(table);
 			keyFields.add(keyField);
 		}
@@ -31,7 +29,7 @@ class QueryBuilderTest {
 		for (int i=0; i<3; i++) {
 			String fieldName = String.format("%s_field%d", alias, i);
 			String fieldId = String.format("%s_%s", tableIdString, fieldName); 
-			DbField field = new DbField(fieldId, fieldName, fieldName, FieldTypeEnum.STRING);
+			DbField field = new DbField(fieldId, fieldName, FieldTypeEnum.STRING);
 			field.setTable(table);
 			fields.add(field);
 		}

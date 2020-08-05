@@ -13,6 +13,10 @@ public class Employee {
 	private String jobId;
 	private Double salary;
 	
+	public String getFullName() {
+		return String.format("%s, %s", lastName, firstName);
+	}
+	
 	private List<Job> jobList;
 	
 	public void setJob(Job job) {

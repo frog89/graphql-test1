@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 @Data
 public class DbField {
 	private final String id; 
-	private final String graphQlAlias;
 	private final String fieldName;
 	private final FieldTypeEnum fieldTypeEnum;
 	private String fieldAlias;

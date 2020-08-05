@@ -5,13 +5,13 @@ import com.frog.graphql.test.querybuilder.DbTable;
 import com.frog.graphql.test.querybuilder.FieldTypeEnum;
 
 public class EmpDbField extends DbField {
-	public EmpDbField(EmpFieldEnum empFieldEnum, String graphQlAlias, String fieldName, FieldTypeEnum fieldTypeEnum) {
-		super(EmpFieldEnum.toOrdinalString(empFieldEnum), graphQlAlias, fieldName, fieldTypeEnum);
+	public EmpDbField(EmpFieldEnum empFieldEnum, String fieldName, FieldTypeEnum fieldTypeEnum) {
+		super(EmpFieldEnum.toOrdinalString(empFieldEnum), fieldName, fieldTypeEnum);
 	}
 	
-	public EmpDbField(EmpFieldEnum empFieldEnum, String graphQlAlias, String fieldName, FieldTypeEnum fieldTypeEnum, 
+	public EmpDbField(EmpFieldEnum empFieldEnum, String fieldName, FieldTypeEnum fieldTypeEnum, 
 			String fieldAlias, DbTable table) {
-		super(EmpFieldEnum.toOrdinalString(empFieldEnum), graphQlAlias, fieldName, fieldTypeEnum, fieldAlias, table);
+		super(EmpFieldEnum.toOrdinalString(empFieldEnum), fieldName, fieldTypeEnum, fieldAlias, table);
 	}
 
 	public EmpFieldEnum getEmpFieldEnum() {

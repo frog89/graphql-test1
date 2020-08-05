@@ -1,10 +1,14 @@
 package com.frog.graphql.test.emp.querybuilder;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.frog.graphql.test.emp.repository.EmpDbField;
+import com.frog.graphql.test.emp.repository.EmpDbTable;
 import com.frog.graphql.test.emp.repository.EmpRepository;
 import com.frog.graphql.test.querybuilder.DbField;
 import com.frog.graphql.test.querybuilder.DbTable;
@@ -13,6 +17,8 @@ import com.frog.graphql.test.querybuilder.QueryBuilderArgs;
 import com.frog.graphql.test.querybuilder.SqlQuery;
 import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
 import com.frog.graphql.test.querybuilder.constraint.SqlOperatorEnum;
+
+import graphql.schema.SelectedField;
 
 @Component
 public class EmpQueryBuilder {
@@ -87,10 +93,34 @@ public class EmpQueryBuilder {
 		andQuery.setWhereClause(null);
 		return andQuery;
 	}
+	
+	public List<DbField> getSelectFields(EmpDbTable table, List<SelectedField> selectedGraphQlFields) {
+		List<DbField> selectFieldList = new ArrayList<DbField>();
+
+		List<SelectedField> graphQlFields = selectedGraphQlFields == null ?
+			Collections.emptyList() : selectedGraphQlFields;
+		for (SelectedField graphQlField : graphQlFields) {
+			String graphQlAlias = graphQlField.getName();
+			if (!empRepository.containsGraphQlMapping(table, graphQlAlias)) {
+				continue;
+			}
+			List<EmpDbField> fields = empRepository.getGraphQlMapping(table, graphQlAlias);
+			selectFieldList.addAll(fields);
+		}
+
+		// Keyfields are always fetched from database
+		for (DbField keyField : table.getKeyFields()) {
+			if (!selectFieldList.contains(keyField)) {
+				selectFieldList.add(keyField);
+			}
+		}
+
+		return selectFieldList;		
+	}
 
 	public SqlQuery createQueryforTable(EmpQueryBuilderArgs args) {
-		DbTable table = empRepository.getTables().get(args.getTableEnum());
-		List<DbField> selectFieldList = table.findFields(args.getSelectedGraphQlFields());
+		EmpDbTable table = empRepository.getTables().get(args.getTableEnum());
+		List<DbField> selectFieldList = getSelectFields(table, args.getSelectedGraphQlFields());
 		addAdditionalFields(selectFieldList, args.getAdditionalSelectedFieldList());
 		
 		SqlQuery sqlQuery = null;
