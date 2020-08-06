@@ -119,7 +119,8 @@ public class EmployeeService {
 		SqlQuery query = queryBuilder.createQueryforTable(args);
 		List<Employee> employeeList = find(query);
 		
-		List<Job> jobList = jobService.findByEmployees(dataFetchingEnvironment, employeeList);
+		List<SelectedField> selectedGraphQlFields = dataFetchingEnvironment.getSelectionSet().getFields("job/*");
+		List<Job> jobList = jobService.findByEmployees(dataFetchingEnvironment, employeeList, selectedGraphQlFields);
 		for (int i=0; i<employeeList.size(); i++) {
 			Employee emp = employeeList.get(i);
 			List<Job> filteredList = jobList.stream()
@@ -134,8 +135,9 @@ public class EmployeeService {
 		return employeeList;
 	}
 
-	public List<Employee> findByJobs(List<Job> jobList, List<SelectedField> selectedEmpFields) {
+	public List<Employee> findByJobs(List<Job> jobList, List<SelectedField> SelectedGraphQlFields) {
 		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.EMPLOYEES);
+		args.setSelectedGraphQlFields(SelectedGraphQlFields);
 		args.addAdditionalSelectedField(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
 		
 		DbField jobIdField = empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID);

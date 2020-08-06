@@ -29,7 +29,16 @@ public class EmployeeFetcher {
 	public DataFetcher<Job> fetchJobForEmployee() {
 		return dataFetchingEnvironment -> {
 			Employee emp = (Employee)dataFetchingEnvironment.getSource();
-			return emp.getJob();
+			Job job = emp.getJob();
+//			if (job == null) {
+//				List<SelectedField> selectedGraphQlFields = dataFetchingEnvironment.getSelectionSet().getFields("*");
+//				List<Job> jobs = jobService.findByEmployees(dataFetchingEnvironment, Arrays.asList(emp), selectedGraphQlFields);
+//				if (jobs.size() == 1) {
+//					job = jobs.get(0);
+//					emp.setJob(job);
+//				}
+//			}
+			return job;
 		};
 	}
 }

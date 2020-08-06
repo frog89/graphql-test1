@@ -76,8 +76,10 @@ public class QueryBuilder {
 		sql.append(fieldClause);
 		sql.append("\nfrom ");
 		sql.append(fromClause);
-		sql.append("\nwhere ");
-		sql.append(whereClause);
+		if (whereClause.length() > 0) {
+			sql.append("\nwhere ");
+			sql.append(whereClause);			
+		}
 		if (pageClause.length() > 0) {
 			sql.append("\n");
 			sql.append(pageClause);			

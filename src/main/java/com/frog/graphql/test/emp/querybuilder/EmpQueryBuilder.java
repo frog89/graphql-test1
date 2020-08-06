@@ -124,12 +124,10 @@ public class EmpQueryBuilder {
 		addAdditionalFields(selectFieldList, args.getAdditionalSelectedFieldList());
 		
 		SqlQuery sqlQuery = null;
-		if (args.getConstraintList() != null && args.getConstraintList().size() > 0) {
-			if (args.getSqlOperator() == SqlOperatorEnum.AND) {
-				sqlQuery = createAndQuery(args, table, selectFieldList);
-			} else { // OR
-				sqlQuery = createOrQuery(args, table, selectFieldList);
-			}
+		if (args.getSqlOperator() == SqlOperatorEnum.AND) {
+			sqlQuery = createAndQuery(args, table, selectFieldList);
+		} else { // OR
+			sqlQuery = createOrQuery(args, table, selectFieldList);
 		}
 
 		return sqlQuery;

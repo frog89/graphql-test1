@@ -96,9 +96,10 @@ public class JobService {
 		return jobList;
 	}
 
-	public List<Job> findByEmployees(DataFetchingEnvironment dataFetchingEnvironment, List<Employee> employeeList) {
+	public List<Job> findByEmployees(DataFetchingEnvironment dataFetchingEnvironment, List<Employee> employeeList, 
+			List<SelectedField> SelectedGraphQlFields) {
 		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.JOBS);
-		args.setSelectedGraphQlFields(dataFetchingEnvironment.getSelectionSet().getFields("job/*"));
+		args.setSelectedGraphQlFields(SelectedGraphQlFields);
 		
 		DbField jobIdField = empRepository.getFields().get(EmpFieldEnum.JOBS_JOB_ID);
 		List<String> jobIdList = new ArrayList<String>();

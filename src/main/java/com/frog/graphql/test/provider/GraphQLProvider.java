@@ -55,13 +55,20 @@ public class GraphQLProvider {
     }
 
     private GraphQLSchema buildSchema(String sdl) {
-        TypeDefinitionRegistry typeRegistry = new SchemaParser().parse(sdl);
+        TypeDefinitionRegistry typeRegistry = new SchemaParser(). parse(sdl);
         RuntimeWiring runtimeWiring = buildWiring();
         SchemaGenerator schemaGenerator = new SchemaGenerator();
-        return schemaGenerator.makeExecutableSchema(typeRegistry, runtimeWiring);
+        GraphQLSchema schema = schemaGenerator.makeExecutableSchema(typeRegistry, runtimeWiring);
+        return schema;
     }
 
     private RuntimeWiring buildWiring() {
+//    	GraphqlFieldVisibility fieldVisibility = BlockedFields.newBlock()
+//    		.addPattern(".*\\.employees")
+//    		.addPattern("Job.employees.job")
+//    		.build();
+//    	GraphqlFieldVisibility fieldVisibility = new CustomFieldVisibility();
+
     	return RuntimeWiring.newRuntimeWiring()
     		.type(newTypeWiring("Query")
     			.dataFetcher("allEmps", employeeFetcher.fetchAll())
@@ -72,6 +79,7 @@ public class GraphQLProvider {
 			).type(newTypeWiring("Job")
 				.dataFetcher("employees", jobFetcher.fetchEmployeesForJob())
 			).type("All", typeWriting -> typeWriting.typeResolver(getAllTypeResolver())
+//			).fieldVisibility(fieldVisibility)
 			).build();
     }
     
