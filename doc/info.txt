@@ -1,2 +1,7 @@
 Code on GitHub:
 https://github.com/vladimir-dejanovic/dive-into-graphql-in-java
+
+Data Fetch Strategy:
+- Services select for one Pojo only
+- DataFetcher combine results for inner Pojos
+- Query DataFetcher's fetch all inner objects up to a specific nest depth.  

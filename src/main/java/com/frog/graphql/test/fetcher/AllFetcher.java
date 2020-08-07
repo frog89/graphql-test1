@@ -1,32 +1,30 @@
 package com.frog.graphql.test.fetcher;
 
-import java.util.List;
+import java.util.function.Consumer;
 
 import javax.annotation.Resource;
 
 import org.springframework.stereotype.Component;
 
-import com.frog.graphql.test.service.EmployeeService;
-import com.frog.graphql.test.service.JobService;
+import com.frog.graphql.test.pojo.Employee;
+import com.frog.graphql.test.pojo.Job;
 
-import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
 
 @Component
 public class AllFetcher {
 	
 	@Resource
-	private JobService jobService;
+	private JobFetcher jobFetcher;
 
 	@Resource
-	private EmployeeService employeeService;
+	private EmployeeFetcher employeeFetcher;
 
-	public DataFetcher<List<Object>> fetchAll() {
-		return  dataFetchingEnvironment -> {
-			List list1 = jobService.findAll(dataFetchingEnvironment);
-			List list2 = employeeService.findAll(dataFetchingEnvironment);
-			list1.addAll(list2);
-			return list1;
-		};
+	public void  fetchAll(Consumer<Object> consumer, DataFetchingEnvironment dataFetchingEnvironment) {
+		Consumer<Job> jobConsumer = j -> consumer.accept(j);
+		jobFetcher.fetchAll(jobConsumer, dataFetchingEnvironment);
+		Consumer<Employee> empConsumer = e -> consumer.accept(e);
+		employeeFetcher.fetchAll(empConsumer, dataFetchingEnvironment);
 	}
 }
 

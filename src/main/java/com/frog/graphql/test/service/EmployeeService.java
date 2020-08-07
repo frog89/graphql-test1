@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,19 +36,15 @@ public class EmployeeService {
 	private JdbcService jdbcService;
 		   
 	@Autowired
-	private JobService jobService;
-	
-	@Autowired
 	private EmpQueryBuilder queryBuilder;
 
 	@Autowired
 	private EmpRepository empRepository;
 	
-	public List<Employee> find(SqlQuery query) {
+	private void find(Consumer<Employee> consumer, SqlQuery query) {
 		List<DbField> selectFields = query.getSelectFieldList();
-		final ArrayList<Employee> list = new ArrayList<Employee>();
 		try {
-			Consumer<ResultSet> consumer = new Consumer<ResultSet>() {
+			Consumer<ResultSet> rsConsumer = new Consumer<ResultSet>() {
 				@Override
 				public void accept(ResultSet rs) {
 					Employee emp = new Employee();
@@ -69,7 +64,7 @@ public class EmployeeService {
 								emp.setSalary(rs.getDouble(i));						
 							}
 						}
-						list.add(emp);
+						consumer.accept(emp);
 					} catch (SQLException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -77,16 +72,14 @@ public class EmployeeService {
 				}
 			};
 			
-			jdbcService.consumeData(query.getSql(), query.getArgInfo(), consumer);
+			jdbcService.consumeData(rsConsumer, query.getSql(), query.getArgInfo());
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return list;
 	}
 
-
-	public List<Employee> findAll(DataFetchingEnvironment dataFetchingEnvironment) {
+	public void findAll(Consumer<Employee> consumer, DataFetchingEnvironment dataFetchingEnvironment) {
 		Map<String, Object> searchParams = (Map<String, Object>)dataFetchingEnvironment.getArgument("searchParams");
 		Integer testIdCount =  (Integer)searchParams.get("testIdCount");
 		Double salaryBetweenLower = (Double)searchParams.get("salaryBetweenLower");
@@ -117,27 +110,12 @@ public class EmployeeService {
 		}
 
 		SqlQuery query = queryBuilder.createQueryforTable(args);
-		List<Employee> employeeList = find(query);
-		
-		List<SelectedField> selectedGraphQlFields = dataFetchingEnvironment.getSelectionSet().getFields("job/*");
-		List<Job> jobList = jobService.findByEmployees(dataFetchingEnvironment, employeeList, selectedGraphQlFields);
-		for (int i=0; i<employeeList.size(); i++) {
-			Employee emp = employeeList.get(i);
-			List<Job> filteredList = jobList.stream()
-				.filter(j -> j.getId().equals(emp.getJobId()))
-				.collect(Collectors.toList());
-			if (filteredList.size() == 1) {
-				emp.setJob(filteredList.get(0));
-			} else {
-				emp.setJob(null);
-			} 
-		} 
-		return employeeList;
+		find(consumer, query);
 	}
 
-	public List<Employee> findByJobs(List<Job> jobList, List<SelectedField> SelectedGraphQlFields) {
+	public void findByJobs(Consumer<Employee> consumer, List<Job> jobList, List<SelectedField> graphQlFields) {
 		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.EMPLOYEES);
-		args.setSelectedGraphQlFields(SelectedGraphQlFields);
+		args.setSelectedGraphQlFields(graphQlFields);
 		args.addAdditionalSelectedField(empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID));
 		
 		DbField jobIdField = empRepository.getFields().get(EmpFieldEnum.EMPLOYEES_JOB_ID);
@@ -149,6 +127,6 @@ public class EmployeeService {
 		args.addConstraint(new StringConstraint(1, jobIdField, StringOperatorEnum.IN, jobIdList));
 		
 		SqlQuery query = queryBuilder.createQueryforTable(args);
-		return find(query);
+		find(consumer, query);
 	}
 }

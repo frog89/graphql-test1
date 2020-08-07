@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -32,71 +31,53 @@ public class JobService {
 	private JdbcService jdbcService;
 
 	@Autowired
-	private EmployeeService employeeService;
-
-	@Autowired
 	private EmpQueryBuilder queryBuilder;
 	
 	@Autowired
 	private EmpRepository empRepository;
 	
-	public List<Job> find(SqlQuery query) {
+	private void find(Consumer<Job> consumer, SqlQuery query) {
 		List<DbField> selectFields = query.getSelectFieldList();
-		final ArrayList<Job> list = new ArrayList<Job>();
 		try {
-			Consumer<ResultSet> consumer = new Consumer<ResultSet>() {
-				@Override
-				public void accept(ResultSet rs) {
-					Job job = new Job();
-					try {
-						for (int i=1; i <= selectFields.size(); i++) {
-							DbField field = selectFields.get(i-1);
-							EmpFieldEnum fieldEnum = EmpFieldEnum.fromOrdinalString(field.getId());
-							if (fieldEnum == EmpFieldEnum.JOBS_JOB_ID) {
-								job.setId(rs.getString(i));								
-							} else if (fieldEnum == EmpFieldEnum.JOBS_JOB_TITLE) {
-								job.setJobTitle(rs.getString(i));
-							} else if (fieldEnum == EmpFieldEnum.JOBS_MIN_SALARY) {
-								job.setMinSalary(rs.getLong(i));
-							} else if (fieldEnum == EmpFieldEnum.JOBS_MAX_SALARY) {
-								job.setMaxSalary(rs.getLong(i));
-							}
+			Consumer<ResultSet> rsConsumer = rs -> {
+				Job job = new Job();
+				try {
+					for (int i=1; i <= selectFields.size(); i++) {
+						DbField field = selectFields.get(i-1);
+						EmpFieldEnum fieldEnum = EmpFieldEnum.fromOrdinalString(field.getId());
+						if (fieldEnum == EmpFieldEnum.JOBS_JOB_ID) {
+							job.setId(rs.getString(i));								
+						} else if (fieldEnum == EmpFieldEnum.JOBS_JOB_TITLE) {
+							job.setJobTitle(rs.getString(i));
+						} else if (fieldEnum == EmpFieldEnum.JOBS_MIN_SALARY) {
+							job.setMinSalary(rs.getLong(i));
+						} else if (fieldEnum == EmpFieldEnum.JOBS_MAX_SALARY) {
+							job.setMaxSalary(rs.getLong(i));
 						}
-						list.add(job);
-					} catch (SQLException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
 					}
+					consumer.accept(job);
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 			};
 			
-			jdbcService.consumeData(query.getSql(), query.getArgInfo(), consumer);
+			jdbcService.consumeData(rsConsumer, query.getSql(), query.getArgInfo());
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return list;
 	}
 
-	public List<Job> findAll(DataFetchingEnvironment dataFetchingEnvironment) {
+	public void findAll(Consumer<Job> consumer, DataFetchingEnvironment dataFetchingEnvironment) {
 		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.JOBS);
 		List<SelectedField> selectedGraphQlFields = dataFetchingEnvironment.getSelectionSet().getFields("*");
 		args.setSelectedGraphQlFields(selectedGraphQlFields);
 		SqlQuery query = queryBuilder.createQueryforTable(args);
-		List<Job> jobList = find(query);
-		
-		List<SelectedField> selectedEmpFields = dataFetchingEnvironment.getSelectionSet().getFields("employees/*");
-		List<Employee> employees = employeeService.findByJobs(jobList, selectedEmpFields);
-		for (int i=0; i<jobList.size(); i++) {
-			Job job = jobList.get(i);
-			List<Employee> filteredList = employees.stream().filter(e -> e.getJobId().equals(job.getId()))
-				.collect(Collectors.toList()); 
-			job.setEmployeeList(filteredList);
-		} 
-		return jobList;
+		find(consumer, query);		
 	}
 
-	public List<Job> findByEmployees(DataFetchingEnvironment dataFetchingEnvironment, List<Employee> employeeList, 
+	public void findByEmployees(Consumer<Job> consumer, DataFetchingEnvironment dataFetchingEnvironment, List<Employee> employeeList, 
 			List<SelectedField> SelectedGraphQlFields) {
 		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.JOBS);
 		args.setSelectedGraphQlFields(SelectedGraphQlFields);
@@ -110,6 +91,6 @@ public class JobService {
 		args.addConstraint(new StringConstraint(1, jobIdField, StringOperatorEnum.IN, jobIdList));
 		
 		SqlQuery query = queryBuilder.createQueryforTable(args);
-		return find(query);
+		find(consumer, query);
 	}
 }

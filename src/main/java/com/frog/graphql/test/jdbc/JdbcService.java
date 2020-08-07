@@ -57,15 +57,15 @@ public class JdbcService {
 		return dataSource.getConnection();
 	}
 	
-	public void consumeData(String sql, JdbcArgInfo argInfo, Consumer<ResultSet> consumer) throws Exception {
+	public void consumeData(Consumer<ResultSet> consumer, String sql, JdbcArgInfo argInfo) throws Exception {
 		long startTime = System.nanoTime();
-		doConsumeData(sql, argInfo, consumer);
+		doConsumeData(consumer, sql, argInfo);
 		long timeInMillis = (System.nanoTime() - startTime) / 1000000;
 		String msg = String.format("Time for sql %s was %d ms.", sql, timeInMillis);
 		System.out.println(msg);
 	}
 	
-	public void doConsumeData(String sql, JdbcArgInfo argInfo, Consumer<ResultSet> consumer) throws Exception {
+	private void doConsumeData(Consumer<ResultSet> consumer, String sql, JdbcArgInfo argInfo) throws Exception {
 		String method ="{? = call get_data_pkg.get_data(?,?,?,?)}";
 		OracleConnection conn = null;
 		CallableStatement statement = null;

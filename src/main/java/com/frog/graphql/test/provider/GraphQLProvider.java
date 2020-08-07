@@ -4,6 +4,8 @@ import static graphql.schema.idl.TypeRuntimeWiring.newTypeWiring;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.List;
+import java.util.function.Consumer;
 
 import javax.annotation.PostConstruct;
 
@@ -12,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import com.frog.graphql.test.fetcher.AllFetcher;
+import com.frog.graphql.test.fetcher.EmpDataFetcher;
 import com.frog.graphql.test.fetcher.EmployeeFetcher;
 import com.frog.graphql.test.fetcher.JobFetcher;
 import com.frog.graphql.test.pojo.Employee;
@@ -21,6 +24,7 @@ import com.google.common.io.Resources;
 
 import graphql.GraphQL;
 import graphql.TypeResolutionEnvironment;
+import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.TypeResolver;
@@ -69,11 +73,26 @@ public class GraphQLProvider {
 //    		.build();
 //    	GraphqlFieldVisibility fieldVisibility = new CustomFieldVisibility();
 
+    	DataFetcher<List<Employee>> empListFetcher = dataFetchingEnvironment -> {
+    		Consumer<Consumer<Employee>> consumerAction = c -> employeeFetcher.fetchAll(c, dataFetchingEnvironment);
+    		return EmpDataFetcher.getAsList(consumerAction);
+		};
+
+    	DataFetcher<List<Job>> jobListFetcher = dataFetchingEnvironment -> {
+    		Consumer<Consumer<Job>> consumerAction = c -> jobFetcher.fetchAll(c, dataFetchingEnvironment);
+			return EmpDataFetcher.getAsList(consumerAction);
+		};
+
+    	DataFetcher<List<Object>> allListFetcher = dataFetchingEnvironment -> {
+    		Consumer<Consumer<Object>> consumerAction = c -> allFetcher.fetchAll(c, dataFetchingEnvironment);
+			return EmpDataFetcher.getAsList(consumerAction);
+		};
+
     	return RuntimeWiring.newRuntimeWiring()
     		.type(newTypeWiring("Query")
-    			.dataFetcher("allEmps", employeeFetcher.fetchAll())
-    			.dataFetcher("allJobs", jobFetcher.fetchAll())
-    			.dataFetcher("allAll", allFetcher.fetchAll())
+    			.dataFetcher("allEmps", empListFetcher)
+    			.dataFetcher("allJobs", jobListFetcher)
+    			.dataFetcher("allAll", allListFetcher)
     		).type(newTypeWiring("Employee")
 				.dataFetcher("job", employeeFetcher.fetchJobForEmployee())
 			).type(newTypeWiring("Job")
