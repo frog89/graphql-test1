@@ -8,7 +8,6 @@ import javax.annotation.PostConstruct;
 
 import org.springframework.stereotype.Component;
 
-import com.frog.graphql.test.querybuilder.DbField;
 import com.frog.graphql.test.querybuilder.DbTable;
 import com.frog.graphql.test.querybuilder.FieldTypeEnum;
 
@@ -20,29 +19,33 @@ public class EmpRepository {
 	@Getter private Hashtable<EmpFieldEnum, EmpDbField> fields;
 	private Hashtable<String, List<EmpDbField>> graphQlAliasMappings;
 
-	private void addTable(EmpDbTable table) {
+	private EmpDbTable addTable(EmpTableEnum empTableEnum, String dbExpression, String dbAlias) {
+		EmpDbTable table = new EmpDbTable(empTableEnum, dbExpression, dbAlias);
 		EmpTableEnum tableEnum = EmpTableEnum.fromOrdinalString(table.getId());
 		tables.put(tableEnum, table);
+		return table;
 	}
 
-	private void addField(String graphQlAlias, EmpDbField field) {
+	private EmpDbField addField(EmpDbTable table, String graphQlAlias, EmpFieldEnum empFieldEnum, String fieldName, FieldTypeEnum fieldTypeEnum,
+			KeyFieldKindEnum keyFieldKindEnum, String fieldAlias) {
+		EmpDbField field = new EmpDbField(empFieldEnum, fieldName, fieldTypeEnum, fieldAlias, table);
 		addGraphQlMapping(field.getTable(), graphQlAlias, field);
 		EmpFieldEnum fieldEnum = EmpFieldEnum.fromOrdinalString(field.getId());
 		fields.put(fieldEnum, field);
-	}
-	
-	private void addTableKeyField(EmpTableEnum tableEnum, EmpFieldEnum fieldEnum) {
-		tables.get(tableEnum).addKeyField(fields.get(fieldEnum));
+		table.addField(field);
+		if (keyFieldKindEnum != KeyFieldKindEnum.NO_KEY && !keyFieldKindEnum.name().startsWith("REF_")) {
+			table.addKeyField(field);
+		}
+		return field;
 	}
 
-	private void addTableFields() {
-		for (EmpFieldEnum fieldEnum : EmpFieldEnum.values()) {
-			DbField field = fields.get(fieldEnum);
-			if (field == null) {
-				continue;
-			}
-			field.getTable().addField(field);
-		}
+	private EmpDbField addField(EmpDbTable table, String graphQlAlias, EmpFieldEnum empFieldEnum, String fieldName, FieldTypeEnum fieldTypeEnum,
+			KeyFieldKindEnum keyFieldKindEnum) {
+		return addField(table, graphQlAlias, empFieldEnum, fieldName, fieldTypeEnum, keyFieldKindEnum, null);
+	}
+
+	private EmpDbField addField(EmpDbTable table, String graphQlAlias, EmpFieldEnum empFieldEnum, String fieldName, FieldTypeEnum fieldTypeEnum) {
+		return addField(table, graphQlAlias, empFieldEnum, fieldName, fieldTypeEnum, KeyFieldKindEnum.NO_KEY, null);
 	}
 	
 	private String getGraphQlMappingKey(DbTable table, String graphQlAlias) {
@@ -69,35 +72,20 @@ public class EmpRepository {
 		graphQlAliasMappings = new Hashtable<String, List<EmpDbField>>();
 		
 		tables = new Hashtable<EmpTableEnum, EmpDbTable>();
-		addTable(new EmpDbTable(EmpTableEnum.EMPLOYEES, "hr.employees", "e"));
-		addTable(new EmpDbTable(EmpTableEnum.JOBS, "hr.jobs", "j"));
+		EmpDbTable empTable = addTable(EmpTableEnum.EMPLOYEES, "hr.employees", "e");
+		EmpDbTable jobTable = addTable(EmpTableEnum.JOBS, "hr.jobs", "j");
 		
 		fields = new Hashtable<EmpFieldEnum, EmpDbField>();
-		addField("id", new EmpDbField(EmpFieldEnum.EMPLOYEES_EMPLOYEE_ID, 
-			"EMPLOYEE_ID", FieldTypeEnum.LONG, null, tables.get(EmpTableEnum.EMPLOYEES)));
-		EmpDbField firstNameField = new EmpDbField(EmpFieldEnum.EMPLOYEES_FIRST_NAME, 
-			"FIRST_NAME", FieldTypeEnum.STRING, null, tables.get(EmpTableEnum.EMPLOYEES));
-		EmpDbField lastNameField = new EmpDbField(EmpFieldEnum.EMPLOYEES_LAST_NAME,
-			"LAST_NAME", FieldTypeEnum.STRING, null, tables.get(EmpTableEnum.EMPLOYEES));
-		addField("firstName", firstNameField);
-		addField("lastName", lastNameField);
-		addGraphQlMapping(tables.get(EmpTableEnum.EMPLOYEES), "fullName", firstNameField, lastNameField);
-		addField("jobId", new EmpDbField(EmpFieldEnum.EMPLOYEES_JOB_ID, 
-			"JOB_ID", FieldTypeEnum.STRING, null, tables.get(EmpTableEnum.EMPLOYEES)));
-		addField("salary", new EmpDbField(EmpFieldEnum.EMPLOYEES_SALARY, 
-			"SALARY", FieldTypeEnum.DOUBLE, null, tables.get(EmpTableEnum.EMPLOYEES)));
+		addField(empTable, "id", EmpFieldEnum.EMPLOYEES_EMPLOYEE_ID, "EMPLOYEE_ID", FieldTypeEnum.LONG, KeyFieldKindEnum.EMPLOYEE_ID);
+		EmpDbField firstNameField = addField(empTable, "firstName", EmpFieldEnum.EMPLOYEES_FIRST_NAME, "FIRST_NAME", FieldTypeEnum.STRING);
+		EmpDbField lastNameField = addField(empTable, "lastName", EmpFieldEnum.EMPLOYEES_LAST_NAME, "LAST_NAME", FieldTypeEnum.STRING);
+		addGraphQlMapping(empTable, "fullName", firstNameField, lastNameField);
+		addField(empTable, "jobId", EmpFieldEnum.EMPLOYEES_JOB_ID, "JOB_ID", FieldTypeEnum.STRING, KeyFieldKindEnum.REF_JOB_ID);
+		addField(empTable, "salary", EmpFieldEnum.EMPLOYEES_SALARY, "SALARY", FieldTypeEnum.DOUBLE);
 
-		addField("id",new EmpDbField(EmpFieldEnum.JOBS_JOB_ID, 
-			"JOB_ID", FieldTypeEnum.STRING, null, tables.get(EmpTableEnum.JOBS)));
-		addField("jobTitle", new EmpDbField(EmpFieldEnum.JOBS_JOB_TITLE, 
-			"JOB_TITLE", FieldTypeEnum.STRING, null, tables.get(EmpTableEnum.JOBS)));
-		addField("minSalary", new EmpDbField(EmpFieldEnum.JOBS_MIN_SALARY, 
-			"MIN_SALARY", FieldTypeEnum.DOUBLE, null, tables.get(EmpTableEnum.JOBS)));
-		addField("maxSalary", new EmpDbField(EmpFieldEnum.JOBS_MAX_SALARY, 
-			"MAX_SALARY", FieldTypeEnum.DOUBLE, null, tables.get(EmpTableEnum.JOBS)));
-		
-		addTableFields();
-		addTableKeyField(EmpTableEnum.EMPLOYEES, EmpFieldEnum.EMPLOYEES_EMPLOYEE_ID);
-		addTableKeyField(EmpTableEnum.JOBS, EmpFieldEnum.JOBS_JOB_ID);
+		addField(jobTable, "id", EmpFieldEnum.JOBS_JOB_ID, "JOB_ID", FieldTypeEnum.STRING, KeyFieldKindEnum.JOB_ID);
+		addField(jobTable, "jobTitle", EmpFieldEnum.JOBS_JOB_TITLE, "JOB_TITLE", FieldTypeEnum.STRING);
+		addField(jobTable, "minSalary", EmpFieldEnum.JOBS_MIN_SALARY, "MIN_SALARY", FieldTypeEnum.DOUBLE);
+		addField(jobTable, "maxSalary", EmpFieldEnum.JOBS_MAX_SALARY, "MAX_SALARY", FieldTypeEnum.DOUBLE);
 	}
 }
