@@ -1,5 +1,8 @@
 package com.frog.graphql.test.querybuilder;
 
+import java.util.List;
+
+import com.frog.graphql.test.emp.querybuilder.EmpQueryBuilderArgs;
 import com.frog.graphql.test.jdbc.JdbcArgInfo;
 import com.frog.graphql.test.querybuilder.constraint.QueryConstraint;
 
@@ -87,7 +90,7 @@ public class QueryBuilder {
 		return sql.toString();
 	}
 	
-	public SqlQuery createQuery(QueryBuilderArgs args) {
+	public SqlQuery createAndQuery(QueryBuilderArgs args) {
 		String fieldClause = createFieldClause(args);
 		String fromClause = createFromClause(args);
 		String pageClause = createPageClause(args);
@@ -111,4 +114,37 @@ public class QueryBuilder {
 		sqlQuery.setArgInfo(argInfo);
 		return sqlQuery;
 	}
+	
+	public SqlQuery createOrQuery(QueryBuilderArgs args) {
+		SqlQuery andQuery = createAndQuery(args);
+		if (args.getConstraintList() == null || args.getConstraintList().size() <= 1) {
+			return andQuery;
+		}
+
+		StringBuffer sqlSelectAndFrom = new StringBuffer();
+		sqlSelectAndFrom.append("select ");
+		sqlSelectAndFrom.append(andQuery.getFieldClause());
+		sqlSelectAndFrom.append("\nfrom ");
+		sqlSelectAndFrom.append(andQuery.getFromClause());
+		
+		StringBuffer sql = new StringBuffer();
+		for (QueryConstraint constraint : args.getConstraintList()) {			
+			if (sql.length() > 0) {
+				sql.append("\nunion\n");
+			}
+			
+			sql.append(sqlSelectAndFrom);
+			sql.append("\nwhere ");
+			sql.append(constraint.getSqlClause());
+		}
+		if (andQuery.getPageClause().length() > 0) {
+			sql.append("\n");
+			sql.append(andQuery.getPageClause());			
+		}
+		
+		andQuery.setSql(sql.toString());
+		andQuery.setWhereClause(null);
+		return andQuery;
+	}
+
 }

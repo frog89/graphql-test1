@@ -81,10 +81,16 @@ public class EmployeeService {
 
 	public void findAll(Consumer<Employee> consumer, DataFetchingEnvironment dataFetchingEnvironment) {
 		Map<String, Object> searchParams = (Map<String, Object>)dataFetchingEnvironment.getArgument("searchParams");
-		Integer testIdCount =  (Integer)searchParams.get("testIdCount");
-		Double salaryBetweenLower = (Double)searchParams.get("salaryBetweenLower");
-		Double salaryBetweenHigher = (Double)searchParams.get("salaryBetweenHigher");
-		String queryOperator = (String)searchParams.get("queryOperator");
+		Integer testIdCount = null;
+		Double salaryBetweenLower = null;
+		Double salaryBetweenHigher = null;
+		String queryOperator = SqlOperatorEnum.AND.name();
+		if (searchParams != null) {
+			testIdCount =  (Integer)searchParams.get("testIdCount");
+			salaryBetweenLower = (Double)searchParams.get("salaryBetweenLower");
+			salaryBetweenHigher = (Double)searchParams.get("salaryBetweenHigher");
+			queryOperator = (String)searchParams.get("queryOperator");			
+		}
 		
 		EmpQueryBuilderArgs args = new EmpQueryBuilderArgs(EmpTableEnum.EMPLOYEES);
 		if (queryOperator.toUpperCase().equals("OR")) {
